@@ -1,32 +1,33 @@
-- name: Use template and shell script to apply profile for environment
+- name: Deploy environment-specific profile and run script
   hosts: all
   become: yes
   vars:
-    env: "dev"  # Can pass via -e env=qa
+    env: "dev"  # override with -e env=qa or set via AAP
     target_user: "myuser"
     profile_template: "/tmp/profile.template"
-    script: "/tmp/apply_profile.sh"
+    profile_script: "/tmp/apply_profile.sh"
     final_profile: "/home/{{ target_user }}/.bash_profile"
+    remote_script_path: "/opt/scripts/my_script.sh"  # already exists remotely
 
   tasks:
 
-    - name: Copy profile template
+    - name: Copy profile template from relative path
       copy:
-        src: files/profile.template
+        src: iics/files/profile.template
         dest: "{{ profile_template }}"
         mode: '0644'
 
-    - name: Copy profile apply script
+    - name: Copy apply_profile shell script
       copy:
-        src: files/apply_profile.sh
-        dest: "{{ script }}"
+        src: iics/files/apply_profile.sh
+        dest: "{{ profile_script }}"
         mode: '0755'
 
-    - name: Apply environment to profile template
-      shell: "{{ script }} {{ env }} {{ profile_template }} {{ final_profile }}"
+    - name: Generate environment-specific .bash_profile
+      shell: "{{ profile_script }} {{ env }} {{ profile_template }} {{ final_profile }}"
 
-    - name: Run script using sourced profile
+    - name: Run shell script with sourced profile
       shell: |
-        bash -c "source {{ final_profile }} && bash /opt/scripts/my_script.sh"
+        bash -c "source {{ final_profile }} && bash {{ remote_script_path }}"
       args:
         executable: /bin/bash
