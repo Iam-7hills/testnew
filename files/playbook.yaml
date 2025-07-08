@@ -1,0 +1,32 @@
+- name: Use template and shell script to apply profile for environment
+  hosts: all
+  become: yes
+  vars:
+    env: "dev"  # Can pass via -e env=qa
+    target_user: "myuser"
+    profile_template: "/tmp/profile.template"
+    script: "/tmp/apply_profile.sh"
+    final_profile: "/home/{{ target_user }}/.bash_profile"
+
+  tasks:
+
+    - name: Copy profile template
+      copy:
+        src: files/profile.template
+        dest: "{{ profile_template }}"
+        mode: '0644'
+
+    - name: Copy profile apply script
+      copy:
+        src: files/apply_profile.sh
+        dest: "{{ script }}"
+        mode: '0755'
+
+    - name: Apply environment to profile template
+      shell: "{{ script }} {{ env }} {{ profile_template }} {{ final_profile }}"
+
+    - name: Run script using sourced profile
+      shell: |
+        bash -c "source {{ final_profile }} && bash /opt/scripts/my_script.sh"
+      args:
+        executable: /bin/bash
