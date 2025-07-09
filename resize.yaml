@@ -1,0 +1,31 @@
+- name: Resize Azure Virtual Machine
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars:
+    resource_group: "your-resource-group-name"
+    vm_name: "your-vm-name"
+    new_vm_size: "Standard_D8ds_v5"
+
+  tasks:
+    - name: Stop and deallocate the VM
+      azure.azcollection.azure_rm_virtualmachine:
+        name: "{{ vm_name }}"
+        resource_group: "{{ resource_group }}"
+        state: stopped
+        started: false
+        force_deallocate: true
+
+    - name: Resize the VM
+      azure.azcollection.azure_rm_virtualmachine:
+        name: "{{ vm_name }}"
+        resource_group: "{{ resource_group }}"
+        vm_size: "{{ new_vm_size }}"
+        state: present
+
+    - name: Start the VM after resize
+      azure.azcollection.azure_rm_virtualmachine:
+        name: "{{ vm_name }}"
+        resource_group: "{{ resource_group }}"
+        state: started
