@@ -3,7 +3,24 @@ import requests
 import json
 import os
 
+from azure.identity import DefaultAzureCredential
+from azure.keyvault.secrets import SecretClient
+
 app = Flask(__name__)
+
+# Load Key Vault config from environment
+KEY_VAULT_NAME = os.getenv("AZURE_KEY_VAULT_NAME")  # e.g., "my-keyvault"
+SECRET_NAME = os.getenv("AUTH_TOKEN_SECRET_NAME")   # e.g., "ODMAuthToken"
+KV_URI = f"https://{KEY_VAULT_NAME}.vault.azure.net/"
+
+# Fetch token from Azure Key Vault
+try:
+    credential = DefaultAzureCredential()
+    client = SecretClient(vault_url=KV_URI, credential=credential)
+    AUTH_TOKEN = client.get_secret(SECRET_NAME).value
+except Exception as e:
+    AUTH_TOKEN = None
+    print(f"Failed to retrieve auth token from Key Vault: {e}")
 
 HTML_TEMPLATE = """
 <!DOCTYPE html>
@@ -41,8 +58,13 @@ def index():
 
             headers = {
                 "Content-Type": "application/json",
-                "Accept": "application/json"
+                "Accept": "application/json",
             }
+
+            if AUTH_TOKEN:
+                headers["Authorization"] = f"Bearer {AUTH_TOKEN}"
+            else:
+                raise Exception("Missing auth token from Azure Key Vault.")
 
             response = requests.post(odm_url, json=parsed_payload, headers=headers, timeout=10)
 
