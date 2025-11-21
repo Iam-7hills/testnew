@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aksappgw-deployment
+  labels:
+    app: aksappgw
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: aksappgw
+  template:
+    metadata:
+      labels:
+        app: aksappgw
+    spec:
+      containers:
+      - name: aksappgw
+        image: iam7hills/dockerdemo:azureILB
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8000
+        env:
+        - name: USE_HTTPS
+          value: "true"
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "250m"
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: aksappgw-svc
+  annotations:
+    service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+spec:
+  type: LoadBalancer
+  selector:
+    app: aksappgw
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8000
+  - name: https
+    port: 443
+    targetPort: 8000
